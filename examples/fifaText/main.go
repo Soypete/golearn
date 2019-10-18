@@ -7,14 +7,26 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/kniren/gota/dataframe"
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/vg"
 )
 
 var (
 	command *string
 )
+
+// WordData is data that will help with training a model that detects names.
+type WordData struct {
+	Word       string
+	Occurances int
+	// Vector     word2vec.Vector
+	IsName bool
+}
 
 // Tweet object for holding raw form of csv data.
 type Tweet struct {
@@ -45,21 +57,136 @@ func main() {
 	file := "../datasets/FIFA.csv"
 	switch *command {
 	case "plot":
-		err := plotData(file)
+		err := understandData(file)
 		log.Println(err)
 	default:
 
 	}
 }
 
-func plotData(file string) error {
+func understandData(file string) error {
 	tweets, err := getData(file)
 	if err != nil {
 		return fmt.Errorf("error getting tweets %v", err)
 	}
 	df := dataframe.LoadStructs(tweets)
-	fmt.Println(df)
-	fmt.Println(df.Select([]string{"Tweets"}))
+	// fmt.Println(df)
+	// fmt.Println(df.Select([]string{"Length", "Likes", "Retweets", "Followers"}).Describe())
+
+	// plotNums(df)
+	plotWords(df)
+	return nil
+}
+
+func plotNums(df dataframe.DataFrame) error {
+	colNames := []string{"Length", "Likes", "Retweets", "Followers"}
+	for _, colName := range colNames {
+		var plotVals plotter.Values
+		for _, floatVal := range df.Col(colName).Float() {
+			plotVals = append(plotVals, floatVal)
+		}
+
+		p, err := plot.New()
+		if err != nil {
+			return err
+		}
+		p.Title.Text = fmt.Sprintf("Histogram of a Tweet %s", colName)
+
+		// Create a histogram of our values drawn
+		// from the standard normal.
+		h, err := plotter.NewHist(plotVals, 16)
+		if err != nil {
+			return err
+		}
+		// Normalize the area under the histogram to
+		// sum to one.
+		p.Add(h)
+		if err := p.Save(4*vg.Inch, 4*vg.Inch, "graphs/"+colName+"_hist.png"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func plotWords(df dataframe.DataFrame) error {
+	var data []WordData
+	mapCounts := make(map[string]int, 100000)
+
+	// make map of names that will be labeled as true
+
+	// there are two columns that contain name data. WE need to take names from
+	// both columns
+	colNames := []string{"Name", "Usermention"}
+	for _, colName := range colNames {
+		vals := df.Col(colName).Records()
+		for _, val := range vals {
+			// split multi word names into single words
+			words := strings.Split(val, " ")
+			for _, w := range words {
+				// remove spaces
+				w = strings.Trim(w, " ")
+				if _, ok := mapCounts[w]; !ok {
+					mapCounts[w] = 1
+					continue
+				}
+				mapCounts[w]++
+			}
+		}
+		// add data to struct that contains important data information.
+		isName := true
+		for name, count := range mapCounts {
+			d := WordData{
+				Word:       name,
+				Occurances: count,
+				IsName:     isName,
+			}
+			data = append(data, d)
+		}
+	}
+	// parse each word in the tweets and lable it as name or not
+	records := df.Col("OrgTweet").Records()
+	tweetWordsCount := make(map[string]int, 100000)
+	for _, r := range records {
+		words := strings.Split(r, " ")
+		for _, w := range words {
+			w = strings.Trim(w, " ")
+			// skip names that we already have
+			if mapCounts[w] > 0 {
+				continue
+			}
+			// we assume we have all the names. This is going
+			// cause some un realiability in the data.
+			if _, ok := tweetWordsCount[w]; !ok {
+				tweetWordsCount[w] = 1
+				continue
+			}
+			tweetWordsCount[w]++
+		}
+	}
+	// add stata to struct
+	for name, count := range tweetWordsCount {
+		d := WordData{
+			Word:       name,
+			Occurances: count,
+			IsName:     false,
+		}
+		data = append(data, d)
+	}
+	fmt.Printf("From the Fifa World Cup Data you have parsed out %d unique words. \n", len(data))
+
+	// create a new data frame
+	newDF := dataframe.LoadStructs(data)
+	fmt.Println(newDF)
+	// get summary of word occurances
+	fmt.Println(newDF.Select([]string{"Occurances"}).Describe())
+	// cache data frame in csv
+	myFile, err := os.Create("data/words.csv")
+	if err != nil {
+		return err
+	}
+	err = newDF.WriteCSV(myFile)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -106,8 +233,8 @@ func getData(file string) ([]Tweet, error) {
 			Followers:     f,
 			Friends:       friends,
 		}
+		// fmt.Println(line[6])
 		tweets = append(tweets, t)
 	}
-	fmt.Println(len(tweets))
 	return tweets, err
 }
