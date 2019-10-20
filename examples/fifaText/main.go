@@ -113,11 +113,13 @@ func DecisionTree(file string) error {
 	}
 	fmt.Println(evaluation.GetSummary(cf))
 
+	tree.Save("models/DecisonTree.h")
+
 	// Next up, Random Trees
 
 	// Consider two randomly-chosen attributes
 	tree2 := trees.NewRandomTree(2)
-	err = tree.Fit(trainData)
+	err = tree2.Fit(trainData)
 	if err != nil {
 		panic(err)
 	}
@@ -131,6 +133,7 @@ func DecisionTree(file string) error {
 		panic(fmt.Sprintf("Unable to get confusion matrix: %s", err.Error()))
 	}
 	fmt.Println(evaluation.GetSummary(cf))
+	tree2.Save("models/RandomTree.h")
 
 	return nil
 }
