@@ -3,6 +3,7 @@ module github.com/Soypete/golearn/examples/fifaText
 go 1.13
 
 require (
+	github.com/Soypete/golearn v0.0.0-20190320045609-2eb4fbdad1c2
 	github.com/gonum/blas v0.0.0-20181208220705-f22b278b28ac // indirect
 	github.com/gonum/floats v0.0.0-20181209220543-c233463c7e82 // indirect
 	github.com/gonum/internal v0.0.0-20181124074243-f884aa714029 // indirect
@@ -10,4 +11,6 @@ require (
 	github.com/gonum/matrix v0.0.0-20181209220409-c518dec07be9 // indirect
 	github.com/gonum/stat v0.0.0-20181125101827-41a0da705a5b // indirect
 	github.com/kniren/gota v0.9.0
+	github.com/sjwhitworth/golearn v0.0.0-20190725152426-6fcc2b4ea533
+	gonum.org/v1/plot v0.0.0-20191004082913-159cd04f920c
 )

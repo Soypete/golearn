@@ -5,12 +5,17 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/sjwhitworth/golearn/evaluation"
+	"github.com/sjwhitworth/golearn/trees"
+
 	"github.com/kniren/gota/dataframe"
+	"github.com/sjwhitworth/golearn/base"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
@@ -57,14 +62,83 @@ func main() {
 	file := "../datasets/FIFA.csv"
 	switch *command {
 	case "plot":
-		err := understandData(file)
+		err := UnderstandData(file)
 		log.Println(err)
+	case "train":
+		err := DecisionTree(("data/words.csv"))
+		log.Println((err))
 	default:
 
 	}
 }
 
-func understandData(file string) error {
+// DecisionTree Write and train DecisionTree model.
+func DecisionTree(file string) error {
+	// var tree base.Classifier
+
+	rand.Seed(44111342)
+
+	// Load in the words dataset
+	words, err := base.ParseCSVToInstances(file, true)
+	if err != nil {
+		return err
+	}
+
+	// Create a 70-30 training-test split
+	trainData, testData := base.InstancesTrainTestSplit(words, 0.70)
+
+	//
+	// First up, use ID3
+	//
+	tree := trees.NewID3DecisionTree(0.6)
+	// (Parameter controls train-prune split.)
+
+	// Train the ID3 tree
+	err = tree.Fit(trainData)
+	if err != nil {
+		return err
+	}
+
+	// Generate predictions
+	predictions, err := tree.Predict(testData)
+	if err != nil {
+		return err
+	}
+
+	// Evaluate
+	fmt.Println("ID3 Performance (information gain)")
+	cf, err := evaluation.GetConfusionMatrix(testData, predictions)
+	if err != nil {
+		return fmt.Errorf("Unable to get confusion matrix: %s", err.Error())
+	}
+	fmt.Println(evaluation.GetSummary(cf))
+
+	// Next up, Random Trees
+
+	// Consider two randomly-chosen attributes
+	tree2 := trees.NewRandomTree(2)
+	err = tree.Fit(trainData)
+	if err != nil {
+		panic(err)
+	}
+	predictions, err = tree2.Predict(testData)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("RandomTree Performance")
+	cf, err = evaluation.GetConfusionMatrix(testData, predictions)
+	if err != nil {
+		panic(fmt.Sprintf("Unable to get confusion matrix: %s", err.Error()))
+	}
+	fmt.Println(evaluation.GetSummary(cf))
+
+	return nil
+}
+
+// UnderstandData pulls raw data from Kaggle world cup twitter data set.
+// Gleans important insights from data. Publish graphs and print out statistical insights.
+// Make rough data set from text data with lable of text or not.
+func UnderstandData(file string) error {
 	tweets, err := getData(file)
 	if err != nil {
 		return fmt.Errorf("error getting tweets %v", err)
