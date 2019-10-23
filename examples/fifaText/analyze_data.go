@@ -1,4 +1,4 @@
-package fifa
+package main  
 
 import (
 	"encoding/csv"
