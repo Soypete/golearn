@@ -1,6 +1,0 @@
-- [ ] Parse and Plot Data
-- [ ] Make array of labeled twitter handles and not handles
-- [ ] Import data for training
-- [ ] Train model
-- [ ] Test the Model
-- [ ] Deploy use case (scrubbing personal data)

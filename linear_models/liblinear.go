@@ -4,8 +4,11 @@ package linear_models
 #include "linear.h"
 */
 import "C"
-import "fmt"
-import "unsafe"
+
+import (
+	"fmt"
+	"unsafe"
+)
 
 type Problem struct {
 	c_prob C.struct_problem
