@@ -1,12 +1,17 @@
+FROM	golang:1.13-alpine3.10
+RUN     apk update && apk add make gcc g++ linux-headers git perl musl-dev
+RUN		git clone https://github.com/xianyi/OpenBLAS && cd OpenBLAS && make && make PREFIX=/usr install
+RUN		mkdir -p /go/bin /go/pkg /go/src/github.com/Soypete/golear
+ENV		GOPATH=/go
+# RUN     go version
+RUN go get -u github.com/gonum/blas
+RUN		go get -u  github.com/sjwhitworth/golearn github.com/kniren/gota/dataframe\ 
+         && go get -u -t gonum.org/v1/gonum/... gonum.org/v1/plot/...
 
-FROM golang:alpine
-RUN  apk update && apk add make linux-headers git
-RUN mkdir go/src/github.com/Soypete -p
-RUN cd go/src/github.com/Soypete
-CMD ls
-RUN git clone https://github.com/Soypete/golearn.git
+ENV foo src/github.com/Soypete/golearn
+WORKDIR ${foo}   # WORKDIR /bar
 
-RUN cd golearn/examples/linear-regression
-CMD ls
-CMD go build ./...
-ENTRYPOINT [ ./linear-regression ]
+COPY   . src/github.com/Soypete/golearn
+RUN     go build ${foo}/examples/linear-regression/main.go
+CMD     [.${foo}/examples/linear-regression/linear-regression]
+# RUN     go run ${foo}/examples/linear-regression/main.go
